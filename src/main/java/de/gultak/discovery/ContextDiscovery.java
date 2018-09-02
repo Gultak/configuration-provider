@@ -34,6 +34,30 @@ public class ContextDiscovery {
     @Value("${configuration.root}")
     private Path configurationRoot;
 
+    public Context context() {
+        // TODO: discover context
+        String contextIdentifier = "/";
+        Context context = contextCache.get(contextIdentifier);
+        if (context == null) {
+            synchronized (contextCache) {
+                context = contextCache.get(contextIdentifier);
+                if (context == null) {
+                    context = initializeContext(contextIdentifier);
+                    contextCache.put(contextIdentifier, context);
+                }
+            }
+        }
+        return context;
+    }
+
+    private ContextDiscovery() {
+        log.info("ContextDiscovery initializing...");
+        log.log(Level.INFO, "-----> Root-Path: {}", configurationRoot);
+        if (!configurationRoot.toFile().exists()) {
+            throw new IllegalArgumentException("Root-Path '" + configurationRoot + "' does not exist!");
+        }
+    }
+
     @Getter
     public static class Context {
         private final String id;
@@ -54,8 +78,8 @@ public class ContextDiscovery {
                 throw new IllegalArgumentException(String.format("Context root (%s) is not accessible!", path));
             }
 
-            try(Stream<Path> files = Files.list(path)) {
-                this.files = files.filter(entry -> !entry.toFile().isDirectory()).filter(
+            try (Stream<Path> filelist = Files.list(path)) {
+                this.files = filelist.filter(entry -> !entry.toFile().isDirectory()).filter(
                         entry -> CONFIGURATION_PATTERN.matcher(entry.getFileName().toString()).matches()).
                                           collect(Collectors.toMap(Path::getFileName, this::properties));
             } catch (IOException e) {
@@ -83,29 +107,6 @@ public class ContextDiscovery {
             return properties.entrySet().parallelStream().collect(
                     Collectors.toMap(entry -> (String) entry.getKey(), entry -> (String) entry.getValue()));
         }
-    }
-
-    private ContextDiscovery() {
-        log.info("ContextDiscovery initializing...");
-        log.log(Level.INFO, "-----> Root-Path: {}", configurationRoot);
-        if (!configurationRoot.toFile().exists()) {
-            throw new IllegalArgumentException("Root-Path '" + configurationRoot + "' does not exist!");
-        }
-    }
-
-    public Context context() {
-        // TODO: discover context
-        String contextIdentifier = "/";
-        Context context = contextCache.get(contextIdentifier);
-        if (context == null) {
-            synchronized (contextCache) {
-                context = contextCache.get(contextIdentifier);
-                if (context == null) {
-                    contextCache.put(contextIdentifier, context = initializeContext(contextIdentifier));
-                }
-            }
-        }
-        return context;
     }
 
     private Context initializeContext(@NotNull String contextIdentifier) {
