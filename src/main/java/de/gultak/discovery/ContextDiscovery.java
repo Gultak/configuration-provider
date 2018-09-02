@@ -22,7 +22,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-// TODO: register Dir Watcher
 @Component
 @Log
 public class ContextDiscovery {
@@ -34,8 +33,15 @@ public class ContextDiscovery {
     @Value("${configuration.root}")
     private Path configurationRoot;
 
+    private ContextDiscovery() {
+        log.info("ContextDiscovery initializing...");
+        log.log(Level.INFO, "-----> Root-Path: {}", configurationRoot);
+        if (!configurationRoot.toFile().exists()) {
+            throw new IllegalArgumentException(String.format("Root-Path (%s) does not exist!", configurationRoot));
+        }
+    }
+
     public Context context() {
-        // TODO: discover context
         String contextIdentifier = "/";
         Context context = contextCache.get(contextIdentifier);
         if (context == null) {
@@ -48,14 +54,6 @@ public class ContextDiscovery {
             }
         }
         return context;
-    }
-
-    private ContextDiscovery() {
-        log.info("ContextDiscovery initializing...");
-        log.log(Level.INFO, "-----> Root-Path: {}", configurationRoot);
-        if (!configurationRoot.toFile().exists()) {
-            throw new IllegalArgumentException("Root-Path '" + configurationRoot + "' does not exist!");
-        }
     }
 
     @Getter
